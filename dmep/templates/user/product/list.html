@@ -34,36 +34,44 @@
   <div class="flex flex-col lg:flex-row gap-10">
 
     <!-- SIDEBAR FILTER -->
-    <aside class="w-full lg:w-64">
+<aside class="w-full lg:w-64">
 
-      <form method="GET" id="filterForm">
-        <input type="hidden" name="q" value="{{ q }}">
+  <div class="flex flex-col gap-2">
 
-        <div class="flex flex-col gap-2">
-          <h2 class="font-bold">Categories</h2>
+    <h2 class="font-bold mb-2">Categories</h2>
 
-          <!-- ALL -->
-          <a href="?q={{ q }}"
-             class="text-sm font-semibold px-2 py-1 rounded
-             {% if not selected_category %}text-blue-500{% else %}text-gray-600{% endif %}
-             hover:text-blue-600">
-            All
+    <!-- ALL -->
+    <a href="?q={{ q }}"
+       class="text-sm font-semibold text-gray-700 hover:text-blue-500">
+      All
+    </a>
+
+    {% for cat in categories %}
+
+      <!-- PARENT CATEGORY -->
+      <button type="button"
+              class="category-parent text-left text-sm font-semibold text-gray-800 hover:text-blue-600"
+              onclick="toggleCat('{{ cat.id }}')">
+        {{ cat.name }}
+      </button>
+
+      <!-- SUBCATEGORIES -->
+      <div id="cat-{{ cat.id }}" class="subcat hidden">
+
+        {% for sub in cat.subcategories.all %}
+          <a href="?q={{ q }}&category={{ sub.id }}"
+             class="block text-xs text-gray-500 hover:text-blue-500 pl-4 py-1">
+            {{ sub.name }}
           </a>
+        {% endfor %}
 
-          {% for cat in categories %}
-          <a href="?q={{ q }}&category={{ cat.id }}"
-             class="text-sm font-semibold px-2 py-1 rounded
-             {% if selected_category == cat.id|stringformat:'s' %}text-blue-500{% else %}text-gray-600{% endif %}
-             hover:text-blue-600">
-            {{ cat.name }}
-          </a>
-          {% endfor %}
+      </div>
 
-        </div>
-      </form>
+    {% endfor %}
 
-    </aside>
+  </div>
 
+</aside>
     <!-- PRODUCTS -->
     <section class="flex-1">
 

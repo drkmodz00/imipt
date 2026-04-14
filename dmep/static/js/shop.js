@@ -99,8 +99,13 @@ const product = {
   openProductModal(product);
 };
 
-// window.showProduct = function(el) {
-//   alert("clicked");
-// };
 
-// prices (WITH SALE SUPPORT)
+function toggleCat(id) {
+  const el = document.getElementById("cat-" + id);
+
+    if (el.classList.contains("hidden")) {
+        el.classList.remove("hidden");
+    } else {
+        el.classList.add("hidden");
+    }
+}

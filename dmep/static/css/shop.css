@@ -313,3 +313,35 @@ body {
   padding: 4px 8px;
   border-radius: 4px;
 }
+
+.category-parent {
+  background: none;
+  border: none;
+  padding: 6px 0;
+  cursor: pointer;
+  display: block;
+}
+
+/* sub categories */
+.subcat {
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+.subcat a {
+  font-size: 12px;
+  color: #6b7280; /* gray */
+  padding-left: 14px;
+  display: block;
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.subcat a:hover {
+  color: #2563eb;
+}
+
+/* smooth animation */
+.subcat {
+  transition: all 0.2s ease;
+}

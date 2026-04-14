@@ -130,7 +130,7 @@ def product_search(request):
     })
 
 def product_list(request):
-    categories = Category.objects.all()
+    categories = Category.objects.filter(parent=None)
     products = Product.objects.filter(status='active').select_related('category')
 
     q = request.GET.get('q', '')
@@ -143,8 +143,11 @@ def product_list(request):
         )
 
     if selected_category:
-        products = products.filter(category_id=selected_category)
-
+        products = products.filter(
+            Q(category_id=selected_category) |
+            Q(category__parent_id=selected_category)
+        )
+        
     # ✅ apply discount to each product
     final_products = []
 
