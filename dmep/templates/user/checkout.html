@@ -75,6 +75,24 @@
                         <div class="item-price-qty">
                             <span class="price">₱{{ item.product.selling_price|floatformat:2 }}</span>
                             <span class="qty">Qty: {{ item.quantity }}</span>
+                            {% if item.discount %}
+                                <p class="discount">
+                                    Discount:
+                                    {% if item.discount.type == 'percentage' %}
+                                        {{ item.discount.value }}% OFF
+                                    {% else %}
+                                        ₱{{ item.discount.value }} OFF
+                                    {% endif %}
+                                </p>
+
+                                <p class="line-discount">
+                                    -₱{{ item.discount_amount|floatformat:2 }}
+                                </p>
+
+                                <p class="final-price">
+                                    Final: ₱{{ item.discounted_total|floatformat:2 }}
+                                </p>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -86,16 +104,28 @@
                     <span>Subtotal</span>
                     <span class="val">₱{{ subtotal|floatformat:2 }}</span>
                 </div>
+
+                <div class="total-row">
+                    <span>Discount</span>
+                    <span class="val">
+                        {% if discount_total > 0 %}
+                            -₱{{ discount_total|floatformat:2 }}
+                        {% else %}
+                            --
+                        {% endif %}
+                    </span>
+                </div>
+
                 <div class="total-row">
                     <span>Shipping</span>
                     <span class="val free">FREE</span>
                 </div>
+
                 <div class="total-row grand-total">
                     <span>TOTAL</span>
                     <span class="val">₱{{ total_amount|floatformat:2 }}</span>
                 </div>
             </div>
-
             <button type="submit" form="checkout-form" class="btn-place-order">
                 Place Order
             </button>
@@ -107,5 +137,21 @@
         </div>
     </aside>
 </div>
+<!-- SUCCESS MODAL -->
+<div id="successModal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-icon">✔</div>
+        <h2>Checkout Successful!</h2>
+        <p>Your order has been placed successfully.</p>
+        <button onclick="closeModal()">OK</button>
+    </div>
+</div>
+{% if request.GET.success %}
+<script>
+    window.onload = function() {
+        document.getElementById("successModal").style.display = "flex";
+    }
+</script>
+{% endif %}
 <script src="{% static 'js/checkout.js' %}"></script>
 {% endblock %}

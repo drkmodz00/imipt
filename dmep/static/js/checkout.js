@@ -15,3 +15,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+document.getElementById("checkout-form").addEventListener("submit", function(e) {
+    e.preventDefault(); // stop immediate submit
+
+    // show modal
+    document.getElementById("successModal").style.display = "flex";
+
+    // OPTIONAL: auto-submit after 2 seconds
+    setTimeout(() => {
+        e.target.submit();
+    }, 2000);
+});
+
+function closeModal() {
+    document.getElementById("successModal").style.display = "none";
+}

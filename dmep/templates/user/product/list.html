@@ -33,46 +33,51 @@
 
   <div class="flex flex-col lg:flex-row gap-10">
 
-    <!-- SIDEBAR FILTER -->
-<aside class="w-full lg:w-64">
+        <!-- SIDEBAR FILTER -->
+    <aside class="w-full lg:w-64">
 
-  <div class="flex flex-col gap-2">
+      <div class="flex flex-col gap-2">
 
-    <h2 class="font-bold mb-2">Categories</h2>
+        <h2 class="font-bold mb-2">Categories</h2>
 
-    <!-- ALL -->
-    <a href="?q={{ q }}"
-       class="text-sm font-semibold text-gray-700 hover:text-blue-500">
-      All
-    </a>
+        <!-- ALL -->
+        <a href="?q={{ q }}"
+          class="text-sm font-semibold text-gray-700 hover:text-blue-500">
+          All
+        </a>
 
-    {% for cat in categories %}
+        {% for cat in categories %}
 
-      <!-- PARENT CATEGORY -->
-      <button type="button"
-              class="category-parent text-left text-sm font-semibold text-gray-800 hover:text-blue-600"
-              onclick="toggleCat('{{ cat.id }}')">
-        {{ cat.name }}
-      </button>
+          <!-- PARENT -->
+          <button type="button"
+                  class="category-parent text-left text-sm font-semibold text-gray-800 hover:text-blue-600"
+                  onclick="toggleCat('{{ cat.id }}')">
+            {{ cat.name }}
+          </button>
 
-      <!-- SUBCATEGORIES -->
-      <div id="cat-{{ cat.id }}" class="subcat hidden">
+          <!-- SUBCATEGORIES -->
+          <div id="cat-{{ cat.id }}"
+              class="subcat {% if active_parent_id != cat.id %}hidden{% endif %}">
 
-        {% for sub in cat.subcategories.all %}
-          <a href="?q={{ q }}&category={{ sub.id }}"
-             class="block text-xs text-gray-500 hover:text-blue-500 pl-4 py-1">
-            {{ sub.name }}
-          </a>
+            {% for sub in cat.subcategories.all %}
+              <a href="?q={{ q }}&category={{ sub.id }}"
+                class="block text-xs pl-4 py-1
+                {% if selected_category == sub.id|stringformat:'s' %}
+                  text-blue-600 font-semibold
+                {% else %}
+                  text-gray-500 hover:text-blue-500
+                {% endif %}">
+                {{ sub.name }}
+              </a>
+            {% endfor %}
+
+          </div>
+
         {% endfor %}
 
       </div>
 
-    {% endfor %}
-
-  </div>
-
-</aside>
-    <!-- PRODUCTS -->
+    </aside>
     <section class="flex-1">
 
       <div class="product-grid">
