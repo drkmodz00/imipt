@@ -14,12 +14,14 @@ urlpatterns = [
     path('cart/add/<int:product_id>/', views_user.add_to_cart, name='cart_add'),
     path('cart/update/<int:product_id>/<str:action>/', views_user.update_cart, name='update_cart'),
     path('cart/remove/<int:product_id>/', views_user.remove_from_cart, name='remove_cart'),
+    path("clear-cart/", views_user.clear_cart, name="clear_cart"),
 
     path('search/', views_user.product_search, name='product-search'),
     path('products/', views_user.product_list, name='product_list'),
     path('products/<int:pk>/', views_user.product_detail, name='product_detail'),
 
-
+    path("checkout/", views_user.checkout_view, name="checkout"),
+    path("process-sale/", views_user.process_sale, name="process_sale"),
     # ======================
     # ADMIN SIDE (PROTECTED)
     # ======================

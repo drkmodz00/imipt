@@ -5,8 +5,9 @@ from django.db.models import Q, F
 from decimal import Decimal
 from django.core.paginator import Paginator
 from django.http import JsonResponse
-from .models import Product, Category, Discount
+from .models import Product, Cashier, Discount, SaleItem, Sale, Customer, Category
 from .utils.discounts import calculate_discounted_price
+from django.db import transaction
 
 
 # =======================
@@ -14,108 +15,112 @@ from .utils.discounts import calculate_discounted_price
 # =======================
 
 def add_to_cart(request, product_id):
-    cart = request.session.get('cart', {})
-
-    product = get_object_or_404(Product, id=product_id)
-
-    # ✅ ALWAYS USE CENTRAL DISCOUNT LOGIC
-    final_price, discount_obj, percent = calculate_discounted_price(product)
+    cart = request.session.get("cart", {})
 
     pid = str(product_id)
 
-    if pid in cart:
-        cart[pid]['qty'] += 1
-    else:
-        cart[pid] = {
-            'name': product.name,
-            'price': float(final_price),                  # discounted price
-            'original_price': float(product.selling_price),  # base price
-            'discount': float(percent) if percent else 0,
-            'qty': 1,
-            'image': product.img.url if product.img else ''
-        }
+    # ensure integer quantity only
+    cart[pid] = int(cart.get(pid, 0)) + 1
 
-    request.session['cart'] = cart
+    request.session["cart"] = cart
     request.session.modified = True
 
-    return redirect('cart')
+    return redirect("cart")
 
 def cart_view(request):
-    cart = request.session.get('cart', {})
+    cart = request.session.get("cart", {})
 
+    cart_items = []
     subtotal = 0
     discount_total = 0
 
-    for item in cart.values():
-        qty = item.get('qty', 1)
-        price = float(item.get('price', 0))
-        original = float(item.get('original_price', price))
+    for product_id, item in cart.items():
+        product = Product.objects.get(id=product_id)
 
-        subtotal += price * qty
-        discount_total += (original - price) * qty
+        if isinstance(item, dict):
+            qty = item.get("qty") or item.get("quantity") or 0
+        else:
+            qty = item
 
-    total = subtotal
+        qty = int(qty)
 
-    print("CART:", cart)
-    print("DISCOUNT TOTAL:", discount_total)
+        # 🔥 GET DISCOUNTED PRICE
+        final_price, discount_obj, percent = calculate_discounted_price(product)
 
-    return render(request, 'user/cart.html', {
-        'cart': cart,
-        'total': total,
-        'discount_total': discount_total,
+        price = float(final_price)
+        original_price = float(product.selling_price or 0)
+
+        line_total = price * qty
+        subtotal += line_total
+
+        # calculate discount saved
+        if discount_obj:
+            discount_total += (original_price - price) * qty
+
+        cart_items.append({
+            "key": product_id,
+            "name": product.name,
+            "price": price,
+            "qty": qty,
+            "image": product.img.url if product.img else "",
+        })
+
+    return render(request, "user/cart.html", {
+        "cart_items": cart_items,
+        "total": subtotal,
+        "discount_total": discount_total,
     })
-
-
+            
 def cart_count(request):
-    cart = request.session.get('cart', {})
-    return {'cart_count': sum(item['qty'] for item in cart.values())}
+    cart = request.session.get("cart", {})
+
+    total_items = 0
+
+    for qty in cart.values():
+        total_items += int(qty or 0)
+
+    return {"cart_count": total_items}
+
+from django.http import JsonResponse
 
 def update_cart(request, product_id, action):
-    cart = request.session.get('cart', {})
+    cart = request.session.get("cart", {})
     pid = str(product_id)
 
     if pid in cart:
-        if action == 'increase':
-            cart[pid]['qty'] += 1
+        if action == "increase":
+            cart[pid] = int(cart.get(pid, 0)) + 1
 
-        elif action == 'decrease':
-            cart[pid]['qty'] -= 1
-            if cart[pid]['qty'] <= 0:
+        elif action == "decrease":
+            cart[pid] = int(cart.get(pid, 0)) - 1
+
+            if cart[pid] <= 0:
                 del cart[pid]
 
-    request.session['cart'] = cart
+    request.session["cart"] = cart
     request.session.modified = True
 
-    return JsonResponse({'status': 'ok'})
+    return JsonResponse({"status": "ok"})
 
-
-# =======================
+def clear_cart(request):
+    request.session["cart"] = {}
+    request.session.modified = True
+    return redirect("cart")
+    
+    # =======================
 # REMOVE ITEM
 # =======================
 
 def remove_from_cart(request, product_id):
-    cart = request.session.get('cart', {})
+    cart = request.session.get("cart", {})
     pid = str(product_id)
 
-    if pid in cart:
-        del cart[pid]
+    cart.pop(pid, None)
 
-    request.session['cart'] = cart
+    request.session["cart"] = cart
     request.session.modified = True
 
-    return JsonResponse({'status': 'ok'})
-
-
-def remove_from_cart(request, product_id):
-    cart = request.session.get('cart', {})
-    pid = str(product_id)
-
-    if pid in cart:
-        del cart[pid]
-
-    request.session['cart'] = cart
-    return JsonResponse({'status': 'ok'})
-
+    return JsonResponse({"status": "ok"})
 
 # =======================
 # PRODUCTS
@@ -205,7 +210,92 @@ def dashboard(request):
         "sale_products": sale_products
     })
 
-# =======================
+def checkout_view(request):
+    cart = request.session.get("cart", {})
+
+    cart_items = []
+    subtotal = 0
+
+    for product_id, qty in cart.items():
+        product = Product.objects.get(id=product_id)
+
+        price = float(product.selling_price or 0)
+        line_total = price * qty
+        subtotal += line_total
+
+        cart_items.append({
+            "product": product,
+            "quantity": qty,
+            "line_total": line_total
+        })
+
+    return render(request, "user/checkout.html", {
+        "cart_items": cart_items,
+        "subtotal": subtotal,
+        "total_amount": subtotal,
+        "payment_choices": Sale.PAYMENT_CHOICES
+    })
+
+@transaction.atomic
+def process_sale(request):
+    if request.method == "POST":
+
+        cart = request.session.get("cart", {})
+
+        if not cart:
+            return redirect("checkout")
+
+        full_name = request.POST.get("full_name")
+        phone = request.POST.get("phone")
+        payment_method = request.POST.get("payment_method")
+
+        customer, _ = Customer.objects.get_or_create(
+            full_name=full_name,
+            phone=phone
+        )
+
+        subtotal = 0
+
+        sale = Sale.objects.create(
+            customer=customer,
+            subtotal=0,
+            total_amount=0,
+            payment_method=payment_method,
+            status="completed"
+        )
+
+        for product_id, qty in cart.items():
+            product = Product.objects.get(id=product_id)
+
+            price = float(product.selling_price or 0)
+            line_total = price * qty
+            subtotal += line_total
+
+            SaleItem.objects.create(
+                sale=sale,
+                product=product,
+                quantity=qty,
+                unit_price=price,
+                line_total=line_total
+            )
+
+            # stock update
+            product.stock_qty = (product.stock_qty or 0) - qty
+            product.save()
+
+        sale.subtotal = subtotal
+        sale.total_amount = subtotal
+        sale.save()
+
+        # CLEAR CART AFTER SALE
+        request.session["cart"] = {}
+        request.session.modified = True
+
+        return redirect("success_page")
+
+    return redirect("checkout")
+    
+        # =======================
 # STATIC PAGES
 # =======================
 
